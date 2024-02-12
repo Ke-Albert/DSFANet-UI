@@ -1,71 +1,112 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import scipy
+import os
 import tensorflow as tf
-from sklearn.cluster import KMeans
-from sklearn.metrics import accuracy_score
+from osgeo import gdal, ogr, osr
 
-import utils
 from dsfamodel import DSFANet
 
+# os.environ["CUDA_VISIBLE_DEVICES"]="0"
+# %%
+print(tf.config.list_physical_devices('GPU'))
 
-def main(X, Y, GT, diff):
-    train_num = 2000
-    max_iters = 2000
-    lr = 1e-4
+def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath, diff=None, flag='train'):
+    """
+    to train model or predict changed areas, outputting a binary image.
+    @params
+    2 dims numpy array X and Y;
+    row,column projection,resolution,lon/minx and lat/maxy of image;
+    number: recording the position of split image
+    diff: the difference of two images
+    flag: to decide whether to train or predict
+    """
+    train_num = 10000 # 2000
+    # 训练数量
+    max_iters = 10000
+    # 迭代次数
+    lr = 1e-5
 
-    index = np.argsort(diff)
-    XData = X[index[0:train_num], :]
-    YData = Y[index[0:train_num], :]
+    tf.compat.v1.disable_eager_execution()
 
-    inputX = tf.placeholder(dtype=tf.float32, shape=[None, X.shape[-1]])
-    inputY = tf.placeholder(dtype=tf.float32, shape=[None, Y.shape[-1]])
+    ### 用于清除默认图形堆栈并重置全局默认图形####
+    tf.compat.v1.reset_default_graph()
+
+    inputX = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, X.shape[-1]])
+    inputY = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, Y.shape[-1]])
     model = DSFANet(num=train_num)
     loss = model.forward(X=inputX, Y=inputY)
+    tf.compat.v1.disable_eager_execution()
+    optimizer = tf.compat.v1.train.GradientDescentOptimizer(lr).minimize(loss)
+    init = tf.compat.v1.global_variables_initializer()
 
-    optimizer = tf.train.GradientDescentOptimizer(lr).minimize(loss)
-    init = tf.global_variables_initializer()
+    config = tf.compat.v1.ConfigProto()
+    config.gpu_options.allow_growth = True
 
-    gpu_options = tf.GPUOptions(allow_growth=True)
-    conf = tf.ConfigProto(gpu_options=gpu_options)
-    sess = tf.Session(config=conf)
-
+    # create a saver used to save model
+    saver = tf.compat.v1.train.Saver()
+    sess = tf.compat.v1.Session(config=config)
     sess.run(init)
 
-    train_loss = np.zeros(max_iters)
+    if flag == 'train':
+        index = np.argsort(diff)
 
-    for k in range(max_iters):
+        XData = X[index[0:train_num], :]
+        # XData = X;
+        # 获取X影像上前2000个会变化的点的位置数据
+        YData = Y[index[0:train_num], :]
+        # YData = Y;
+        # 获取X影像上前2000个会变化的点的位置数据
 
-        _, train_loss[k] = sess.run([optimizer, loss], feed_dict={inputX: XData, inputY: YData})
+        # check if having the saved model, then restore its weights and bias
+        if os.path.exists("Model/Gfzhengzhou/"):
+            print('导入模型权重')
+            saver.restore(sess, "Model/Gfzhengzhou/Gfzhengzhou")
+            print('模型权重导入成功!')
+        train_loss = np.zeros(max_iters)
+        for k in range(max_iters):
+            _, train_loss[k] = sess.run([optimizer, loss], feed_dict={inputX: XData, inputY: YData})
+            if k % 1000 == 0:
+                print('iter %4d, loss is %.4f' % (k, train_loss[k]))
 
-        if k % 100 == 0:
-            print('iter %4d, loss is %.4f' % (k, train_loss[k]))
+        saver.save(sess, "Model/Gfzhengzhou/Gfzhengzhou")  # save trained model
 
-    XTest, YTest = sess.run([model.X_, model.Y_], feed_dict={inputX: X, inputY: Y})
+        # return 0
+        XTest, YTest = sess.run([model.X_, model.Y_], feed_dict={inputX: X, inputY: Y})
+        sess.close()
 
-    sess.close()
+        diff = XTest - YTest
+        diff = diff / np.std(diff, axis=0)
 
-    X_trans, Y_trans = utils.SFA(XTest, YTest)
+        out_dif = outputpath
+        print(row, column)
+        diff = (diff ** 2).sum(axis=1).reshape(row, column)
+        outputTif(out_dif + number + '.tif', column, row, lon, lat, resolution, projection, diff)
+    else:
+        try:
+            if os.path.exists("Model/Gfzhengzhou/"):
+                print('导入模型权重')
+                saver.restore(sess, "Model/Gfzhengzhou/Gfzhengzhou")
+                print('模型权重导入成功!')
+        except:
+            raise Exception('模型导入失败!')
+        XTest, YTest = sess.run([model.X_, model.Y_], feed_dict={inputX: X, inputY: Y})
+        sess.close()
 
-    diff = X_trans - Y_trans
-    diff = diff / np.std(diff, axis=0)
+        diff = XTest - YTest
+        diff = diff / np.std(diff, axis=0)
+        out_dif = outputpath
 
-    plt.imsave('DSFAdiff.png', (diff ** 2).sum(axis=1).reshape(GT.shape), cmap='gray')
-
-    bin = KMeans(n_clusters=2).fit((diff ** 2).sum(axis=-1, keepdims=True)).labels_
-    # bin = KMeans(n_clusters=2).fit(diff).labels_
-    plt.imsave('DSFACD.png', bin.reshape(GT.shape), cmap='gray')
-    # diff = abs(diff)
-    # plt.imsave('DSFAcolor.png',(diff/diff.max()).reshape(GT.shape[0], GT.shape[1],3))
-
-    print(accuracy_score(GT.reshape(-1, 1) / 255, bin))
-    print(accuracy_score(GT.reshape(-1, 1) / 255, 1 - bin))
-
-    return True
-
-
-if __name__ == '__main__':
-    X, Y, GT = utils.load_dataset()
-    diff = utils.cva(X=X, Y=Y)
-    plt.imsave('CVAdiff.png', np.reshape(diff, GT.shape), cmap='gray')
-    main(X, Y, GT, diff)
+        print(row,column)
+        diff = (diff ** 2).sum(axis=1).reshape(row, column)
+        outputTif(out_dif + number + '.tif', column, row, lon, lat, resolution, projection,diff)
+def outputTif(out_diff, row, column, lon, lat, resolution, projection, data):
+    """tranform the array data into tif image
+    row,column is the original image's row and column
+    lon,lat,resolution,projection can be obtained using gdal
+    """
+    driver = gdal.GetDriverByName("GTiff")  # 数据类型必须有，因为要计算需要多大内存空间
+    dataset = driver.Create(out_diff, row, column, 1, gdal.GDT_Float32)
+    dataset.SetGeoTransform((lon, resolution, 0, lat, 0, -resolution))  # 写入仿射变换参数
+    dataset.SetProjection(projection)  # 写入投
+    print(data.shape)
+    dataset.GetRasterBand(1).WriteArray(data)  # 写入数组数据
+    # del dataset
