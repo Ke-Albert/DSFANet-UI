@@ -1,16 +1,13 @@
 import tensorflow as tf
-import keras
-from keras import layers
 class DSFANet(object):
-    def __init__(self, num=None,output_num=6,hidden_num=128,layers=2,
-                 reg=1e-4,activation=tf.nn.softsign,init=tf.initializers.he_normal):
+    def __init__(self, num=None):
         self.num = num
-        self.output_num = output_num
-        self.hidden_num = hidden_num
-        self.layers = layers
-        self.reg = reg
-        self.activation = activation
-        self.init = init
+        self.output_num = 6
+        self.hidden_num = 128
+        self.layers = 2
+        self.reg = 1e-4
+        self.activation = tf.nn.softsign
+        self.init = tf.initializers.he_normal()
 
     def DSFA(self, X, Y):
 
@@ -44,12 +41,14 @@ class DSFANet(object):
         return loss
 
     def forward(self, X, Y):
-        model_x=keras.Sequential([layers.Dense(self.hidden_num,activation=self.activation,input_shape=[1])])
-        model_y=keras.Sequential([layers.Dense(self.hidden_num,activation=self.activation,input_shape=[1])])
-        for k in range(self.layers-1):
-            model_x.add(layers.Dense(self.hidden_num,activation=self.activation))
-            model_y.add(layers.Dense(self.hidden_num, activation=self.activation))
-        model_x.add(layers.Dense(self.output_num,activation=self.activation))
-        model_y.add(layers.Dense(self.output_num,activation=self.activation))
-        self.X_=model_x(X)
-        self.Y_=model_y(Y)
+
+        for k in range(self.layers):
+            X = tf.compat.v1.layers.dense(inputs=X, units=self.hidden_num, activation=self.activation, use_bias=True,)
+            Y = tf.compat.v1.layers.dense(inputs=Y, units=self.hidden_num, activation=self.activation, use_bias=True,)
+
+        self.X_ = tf.compat.v1.layers.dense(inputs=X, units=self.output_num, activation=self.activation, use_bias=True,)
+        self.Y_ = tf.compat.v1.layers.dense(inputs=Y, units=self.output_num, activation=self.activation, use_bias=True,)
+
+        loss = self.DSFA(self.X_, self.Y_)
+
+        return loss
