@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import tensorflow as tf
-from osgeo import gdal, ogr, osr
+from osgeo import gdal
 
 from dsfamodel import DSFANet
 
@@ -10,7 +10,7 @@ from dsfamodel import DSFANet
 # %%
 # print(tf.config.list_physical_devices('GPU'))
 
-def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath, diff=None, flag='train'):
+def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath, train_num=2000,max_iters=4000,lr=1e-5,diff=None, flag='train'):
     """
     to train model or predict changed areas, outputting a binary image.
     @params
@@ -20,11 +20,11 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
     diff: the difference of two images
     flag: to decide whether to train or predict
     """
-    train_num = 2000  # 2000
+    train_num = train_num  # 2000
     # 训练数量
-    max_iters = 4000
+    max_iters = max_iters
     # 迭代次数
-    lr = 1e-5
+    lr = lr
 
     tf.compat.v1.disable_eager_execution()
 
