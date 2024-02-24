@@ -5,9 +5,10 @@ from osgeo import gdal, ogr, osr
 
 from dsfamodel import DSFANet
 
+
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
 # %%
-print(tf.config.list_physical_devices('GPU'))
+# print(tf.config.list_physical_devices('GPU'))
 
 def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath, diff=None, flag='train'):
     """
@@ -19,9 +20,9 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
     diff: the difference of two images
     flag: to decide whether to train or predict
     """
-    train_num = 10000 # 2000
+    train_num = 2000  # 2000
     # 训练数量
-    max_iters = 10000
+    max_iters = 4000
     # 迭代次数
     lr = 1e-5
 
@@ -57,9 +58,9 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
         # 获取X影像上前2000个会变化的点的位置数据
 
         # check if having the saved model, then restore its weights and bias
-        if os.path.exists("Model/Gfzhengzhou/"):
+        if os.path.exists("Model/test/"):
             print('导入模型权重')
-            saver.restore(sess, "Model/Gfzhengzhou/Gfzhengzhou")
+            saver.restore(sess, "Model/test/test")
             print('模型权重导入成功!')
         train_loss = np.zeros(max_iters)
         for k in range(max_iters):
@@ -67,7 +68,7 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
             if k % 1000 == 0:
                 print('iter %4d, loss is %.4f' % (k, train_loss[k]))
 
-        saver.save(sess, "Model/Gfzhengzhou/Gfzhengzhou")  # save trained model
+        saver.save(sess, "Model/test/test")  # save trained model
 
         # return 0
         XTest, YTest = sess.run([model.X_, model.Y_], feed_dict={inputX: X, inputY: Y})
@@ -82,9 +83,9 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
         outputTif(out_dif + number + '.tif', column, row, lon, lat, resolution, projection, diff)
     else:
         try:
-            if os.path.exists("Model/Gfzhengzhou/"):
+            if os.path.exists("Model/test/"):
                 print('导入模型权重')
-                saver.restore(sess, "Model/Gfzhengzhou/Gfzhengzhou")
+                saver.restore(sess, "Model/test/test")
                 print('模型权重导入成功!')
         except:
             raise Exception('模型导入失败!')
@@ -95,9 +96,11 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
         diff = diff / np.std(diff, axis=0)
         out_dif = outputpath
 
-        print(row,column)
+        print(row, column)
         diff = (diff ** 2).sum(axis=1).reshape(row, column)
-        outputTif(out_dif + number + '.tif', column, row, lon, lat, resolution, projection,diff)
+        outputTif(out_dif + number + '.tif', column, row, lon, lat, resolution, projection, diff)
+
+
 def outputTif(out_diff, row, column, lon, lat, resolution, projection, data):
     """tranform the array data into tif image
     row,column is the original image's row and column
@@ -107,6 +110,8 @@ def outputTif(out_diff, row, column, lon, lat, resolution, projection, data):
     dataset = driver.Create(out_diff, row, column, 1, gdal.GDT_Float32)
     dataset.SetGeoTransform((lon, resolution, 0, lat, 0, -resolution))  # 写入仿射变换参数
     dataset.SetProjection(projection)  # 写入投
-    print(data.shape)
+    # print(data.shape)
     dataset.GetRasterBand(1).WriteArray(data)  # 写入数组数据
-    # del dataset
+    dataset.FlushCache()
+    dataset = None
+    driver = None

@@ -2,18 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 from osgeo import gdal, ogr, osr
-import imageio
-import os
-import tkinter as tk
-from tkinter import filedialog
 from scipy import io as sio
-from PIL import Image
 from sklearn import preprocessing
-from sklearn.cluster import KMeans
-
-# import time
-# from Methodology.util.cluster_util import otsu
-# from Methodology.util.data_prepro import stad_img
 
 
 def normalize(data):
@@ -58,13 +48,11 @@ def load_dataset(path_before='../landsat_test/landsat_0614.tif', path_after='../
     resolution: space resolution of two images
     """
     suffix = path_before.split('.')[-1]
-    GT=0
 
 
     if suffix == 'mat':
         imgX = sio.loadmat(path_before)[path_before.split('/')[-1].split('.')[0]]
         imgY = sio.loadmat(path_after)[path_after.split('/')[-1].split('.')[0]]
-        GT = sio.loadmat('river/groundtruth.mat')['lakelabel_v1']
     elif suffix == 'tif':
         imgX = gdal.Open(path_before)
         imgY = gdal.Open(path_after)
@@ -94,14 +82,17 @@ def load_dataset(path_before='../landsat_test/landsat_0614.tif', path_after='../
         # Y = normalize(imgY)
 
     # using cva to quickly compute the difference between the two images
-    diff = cva(X=X, Y=Y)
-    diff = gdal.Open(r"G:\2308Meteorological Bureau\visiable_Texture_combine\stack\2020GF\stack\diff.tif")
-    if train_or_pre == '1':
-        minx, xres, xskew, maxy, yskew, yres = diff.GetGeoTransform()
-        img_width = diff.RasterXSize  # image width
-        img_height = diff.RasterYSize  # image height
-        diff = diff.ReadAsArray(0, 0, img_width, img_height)
-        diff=diff.reshape(-1)
+    try:
+        diff = gdal.Open(r"G:\2308Meteorological Bureau\visiable_Texture_combine\stack\2020GF\stack\diff.tif")
+        if train_or_pre == '1':
+            minx, xres, xskew, maxy, yskew, yres = diff.GetGeoTransform()
+            img_width = diff.RasterXSize  # image width
+            img_height = diff.RasterYSize  # image height
+            diff = diff.ReadAsArray(0, 0, img_width, img_height)
+            diff = diff.reshape(-1)
+    except:
+        diff=cva(X=X,Y=Y)
+
     param_dict = {'before': X, 'after': Y,'diff': diff, 'row': row, 'column': column,
                   'projection': imgX_proj, 'minX': minx, 'maxY': maxy, 'resolution': xres}
     return param_dict
