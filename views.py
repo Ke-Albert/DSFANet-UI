@@ -1,6 +1,8 @@
 import tkinter as tk
+import tkinter.ttk
 import tkinter.messagebox
 from tkinter import filedialog
+
 from constant import Constant
 home=Constant.home
 
@@ -47,8 +49,10 @@ class CreateRun:
         self.create_page(self.run_frame,run)
 
     def create_page(self,root,run):
-        button = tk.Button(root, text='run', command=run)
-        button.grid(row=5,column=2)
+        self.button = tk.Button(root, text='run', command=run)
+        self.button.grid(row=5,column=2)
+        self.progressbar=tkinter.ttk.Progressbar(root)
+        self.progressbar.grid(row=6,column=2,pady=10)
 
 
 class CreateModel:

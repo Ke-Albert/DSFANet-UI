@@ -6,6 +6,7 @@ import re
 from osgeo import gdal
 from sklearn.cluster import KMeans
 
+
 import main
 import utils
 import core
@@ -59,12 +60,12 @@ def check_number(entry):
 
 
 def run():
-    #error checking
+    # error checking
     global flag
     flag = False
     waiting_check = [basic_frame.imageB.entry, basic_frame.imageA.entry, basic_frame.splitB.entry,
                      basic_frame.splitA.entry, basic_frame.splitD.entry,
-                     basic_frame.merge.entry, basic_frame.entry, basic_frame.entry_1,model_frame.model]
+                     basic_frame.merge.entry, basic_frame.entry, basic_frame.entry_1, model_frame.model]
     for i in waiting_check:
         check_blank(i)
         if flag:
@@ -82,7 +83,7 @@ def run():
 
     renew_constant()
     train_num, max_iters, lr = Constant.train_num, Constant.max_iters, Constant.lr
-    model_path=model_frame.model.get()
+    model_path = model_frame.model.get()
     # split
     img_path_before = basic_frame.imageB.entry.get()
     img_path_after = basic_frame.imageA.entry.get()
@@ -113,7 +114,13 @@ def run():
         else:
             print('输入错误')
     counter = 1
+    run_frame.progressbar['maximum']=len(tifs_after)
+    run_frame.progressbar['value']=0
     for tif_before, tif_after in zip(tifs_before, tifs_after):
+        #show progress
+        run_frame.progressbar['value']+=1
+        run_frame.run_frame.update()
+
         counter += 1
         print('the {} time'.format(counter))
         print('path:', tif_before, tif_after)
@@ -125,11 +132,13 @@ def run():
             params['minX'], params['maxY'], params['resolution']
 
         if train_or_pre == '1':
-            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', model_path,train_num,
+            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', model_path,
+                      train_num,
                       max_iters, lr, diff=diff)
 
         elif train_or_pre == '2':
-            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', model_path,train_num,
+            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', model_path,
+                      train_num,
                       max_iters, lr, flag='pre')
 
     del X, Y, diff
