@@ -60,8 +60,11 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
         # check if having the saved model, then restore its weights and bias
         if os.path.exists("Model/"+model_path+'/'):
             print('导入模型权重')
-            saver.restore(sess, "Model/"+model_path+'/'+model_path)
-            print('模型权重导入成功!')
+            try:
+                saver.restore(sess, "Model/"+model_path+'/'+model_path)
+                print('模型权重导入成功!')
+            except:
+                raise Exception('导入失败')
         train_loss = np.zeros(max_iters)
         for k in range(max_iters):
             _, train_loss[k] = sess.run([optimizer, loss], feed_dict={inputX: XData, inputY: YData})

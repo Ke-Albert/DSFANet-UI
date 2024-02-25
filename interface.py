@@ -161,14 +161,14 @@ def run():
     diff = np.expand_dims(diff, axis=1)
     bin = KMeans(n_clusters=2).fit(diff).labels_
     out_CD = out_put_path + '/' + out_put_name + '.tif'
-    print('开始输出阈值分割图片...')
+    run_frame.text.insert('end','开始阈值分割...'+'\n')
     core.outputTif(out_CD, img_width, img_height, minx, maxy, xres, projection, bin.reshape(img_height, img_width))
-    print('阈值输出完成!')
+    run_frame.text.insert('end','阈值分割完成！'+'\n')
 
     ###################
     # 删除临时分割的影像##
     ###################
-    print('清理临时文件中...')
+    run_frame.text.insert('end','清理临时文件中...'+'\n')
     for file in glob.glob(split_diff + '/' + '*'):
         os.remove(file)
     for file in glob.glob(split_path_before + '/' + '*'):
@@ -177,7 +177,7 @@ def run():
         os.remove(file)
     for file in glob.glob(merge_path + '/' + '*'):
         os.remove(file)
-    print('清理完成!')
+    run_frame.text.insert('end','清理完成'+'\n')
 
 
 def save_parameters():

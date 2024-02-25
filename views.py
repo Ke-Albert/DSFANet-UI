@@ -53,6 +53,8 @@ class CreateRun:
         self.button.grid(row=5,column=2)
         self.progressbar=tkinter.ttk.Progressbar(root)
         self.progressbar.grid(row=6,column=2,pady=10)
+        self.text=tk.Text(root,height=15)
+        self.text.grid(row=7,column=2,pady=20)
 
 
 class CreateModel:
