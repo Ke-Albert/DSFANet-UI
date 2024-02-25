@@ -1,30 +1,87 @@
 import os, glob
 import tkinter as tk
+import tkinter.messagebox
 import pickle
+import re
+from osgeo import gdal
+from sklearn.cluster import KMeans
 
 import main
 import utils
 import core
-from osgeo import gdal
 import numpy as np
-from sklearn.cluster import KMeans
-from views import CreateAbout,CreateRun,CreateHyper,CreaterBasic
+from views import CreateAbout, CreateRun, CreateHyper, CreaterBasic
 from constant import Constant
 
 prefix = 'split'
 merge_name = 'merge.tif'
+flag = False
+
 
 def renew_constant():
     if hyper_frame.train_num.get():
-        Constant.train_num=hyper_frame.train_num.get()
+        Constant.train_num = int(hyper_frame.train_num.get())
     if hyper_frame.max_iters.get():
-        Constant.max_iters=hyper_frame.max_iters.get()
+        Constant.max_iters = int(hyper_frame.max_iters.get())
     if hyper_frame.lr.get():
-        Constant.lr=hyper_frame.lr.get()
+        Constant.lr = float(hyper_frame.lr.get())
+
+
+def check_tif(entry):
+    global flag
+    content = entry.get().split('.')[-1]
+    if content != 'tif':
+        flag = True
+        tk.messagebox.showerror(title='Format error', message='The image should be tif format')
+
+
+def check_blank(entry):
+    global flag
+    content = entry.get()
+    if not content:
+        flag = True
+        tk.messagebox.showwarning(title='Warning', message='There are some infomation should be completed')
+
+
+def check_number(entry):
+    """
+    Example:train_num=200,max_iters=1000,lr=1e-5
+    :param entry:
+    :return:
+    """
+    global flag
+    content = entry.get()
+    if not content or re.match(r'^-?\d*\.?\d*(e-?\d+)?$', content):
+        pass
+    else:
+        flag = True
+        tk.messagebox.showerror(title='Format error', message='Your input should be numbers')
+
 
 def run():
+    #error checking
+    global flag
+    flag = False
+    waiting_check = [basic_frame.imageB.entry, basic_frame.imageA.entry, basic_frame.splitB.entry,
+                     basic_frame.splitA.entry, basic_frame.splitD.entry,
+                     basic_frame.merge.entry, basic_frame.entry, basic_frame.entry_1]
+    for i in waiting_check:
+        check_blank(i)
+        if flag:
+            return
+    waiting_check = [basic_frame.imageB.entry, basic_frame.imageA.entry]
+    for i in waiting_check:
+        check_tif(i)
+        if flag:
+            return
+    waiting_check = [hyper_frame.train_num, hyper_frame.max_iters, hyper_frame.lr]
+    for i in waiting_check:
+        check_number(i)
+        if flag:
+            return
+
     renew_constant()
-    train_num,max_iters,lr=Constant.train_num,Constant.max_iters,Constant.lr
+    train_num, max_iters, lr = Constant.train_num, Constant.max_iters, Constant.lr
     # split
     img_path_before = basic_frame.imageB.entry.get()
     img_path_after = basic_frame.imageA.entry.get()
@@ -67,10 +124,12 @@ def run():
             params['minX'], params['maxY'], params['resolution']
 
         if train_or_pre == '1':
-            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/',train_num,max_iters,lr, diff=diff)
+            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', train_num,
+                      max_iters, lr, diff=diff)
 
         elif train_or_pre == '2':
-            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/',train_num,max_iters,lr, flag='pre')
+            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', train_num,
+                      max_iters, lr, flag='pre')
 
     del X, Y, diff
 
@@ -112,9 +171,12 @@ def run():
 
 
 def save_parameters():
-    vars = {'imgB': basic_frame.imageB.entry.get(), 'imgA': basic_frame.imageA.entry.get(), 'splitB': basic_frame.splitB.entry.get(),
-            'splitA': basic_frame.splitA.entry.get(), 'splitD': basic_frame.splitD.entry.get(), 'merge': basic_frame.merge.entry.get(),
-            'outPut': basic_frame.outPut.entry.get(), 'entry': basic_frame.entry.get(), 'entry_1': basic_frame.entry_1.get()}
+    vars = {'imgB': basic_frame.imageB.entry.get(), 'imgA': basic_frame.imageA.entry.get(),
+            'splitB': basic_frame.splitB.entry.get(),
+            'splitA': basic_frame.splitA.entry.get(), 'splitD': basic_frame.splitD.entry.get(),
+            'merge': basic_frame.merge.entry.get(),
+            'outPut': basic_frame.outPut.entry.get(), 'entry': basic_frame.entry.get(),
+            'entry_1': basic_frame.entry_1.get()}
     with open('paraters.pickle', 'wb') as f:
         pickle.dump(vars, f)
 
@@ -167,11 +229,10 @@ def show_basic():
 window = tk.Tk()
 window.title('DSFANet Change Detection')
 window.geometry('500x500')
-basic_frame=CreaterBasic(window)
-about_frame=CreateAbout(window)
-run_frame=CreateRun(window,run)
-hyper_frame=CreateHyper(window)
-
+basic_frame = CreaterBasic(window)
+about_frame = CreateAbout(window)
+run_frame = CreateRun(window, run)
+hyper_frame = CreateHyper(window)
 
 menubar = tk.Menu(window)
 filemenu = tk.Menu(menubar, tearoff=0)
@@ -179,11 +240,10 @@ menubar.add_cascade(label='File', menu=filemenu)
 filemenu.add_command(label='Save parameters', command=save_parameters)
 filemenu.add_command(label='Load parameters', command=load_parameters)
 
-
-menubar.add_command(label='Basic',command=show_basic)
-menubar.add_command(label='Hyperparameters',command=show_hyper)
-menubar.add_command(label='Run',command=show_run)
-menubar.add_command(label='About',command=show_about)
+menubar.add_command(label='Basic', command=show_basic)
+menubar.add_command(label='Hyperparameters', command=show_hyper)
+menubar.add_command(label='Run', command=show_run)
+menubar.add_command(label='About', command=show_about)
 
 window.config(menu=menubar)
 window.mainloop()
