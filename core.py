@@ -10,7 +10,7 @@ from dsfamodel import DSFANet
 # %%
 # print(tf.config.list_physical_devices('GPU'))
 
-def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath, train_num=2000,max_iters=4000,lr=1e-5,diff=None, flag='train'):
+def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath,model_path, train_num=2000,max_iters=4000,lr=1e-5,diff=None, flag='train'):
     """
     to train model or predict changed areas, outputting a binary image.
     @params
@@ -58,9 +58,9 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
         # 获取X影像上前2000个会变化的点的位置数据
 
         # check if having the saved model, then restore its weights and bias
-        if os.path.exists("Model/test/"):
+        if os.path.exists("Model/"+model_path+'/'):
             print('导入模型权重')
-            saver.restore(sess, "Model/test/test")
+            saver.restore(sess, "Model/"+model_path+'/'+model_path)
             print('模型权重导入成功!')
         train_loss = np.zeros(max_iters)
         for k in range(max_iters):
@@ -68,7 +68,7 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
             if k % 1000 == 0:
                 print('iter %4d, loss is %.4f' % (k, train_loss[k]))
 
-        saver.save(sess, "Model/test/test")  # save trained model
+        saver.save(sess, "Model/"+model_path+'/'+model_path)  # save trained model
 
         # return 0
         XTest, YTest = sess.run([model.X_, model.Y_], feed_dict={inputX: X, inputY: Y})
@@ -83,9 +83,9 @@ def main(X, Y, row, column, projection, lon, lat, resolution, number, outputpath
         outputTif(out_dif + number + '.tif', column, row, lon, lat, resolution, projection, diff)
     else:
         try:
-            if os.path.exists("Model/test/"):
+            if os.path.exists("Model/"+model_path+'/'):
                 print('导入模型权重')
-                saver.restore(sess, "Model/test/test")
+                saver.restore(sess, "Model/"+model_path+'/'+model_path)
                 print('模型权重导入成功!')
         except:
             raise Exception('模型导入失败!')

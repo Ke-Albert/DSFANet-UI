@@ -10,7 +10,7 @@ import main
 import utils
 import core
 import numpy as np
-from views import CreateAbout, CreateRun, CreateHyper, CreaterBasic
+from views import CreateAbout, CreateRun, CreateModel, CreaterBasic
 from constant import Constant
 
 prefix = 'split'
@@ -19,12 +19,12 @@ flag = False
 
 
 def renew_constant():
-    if hyper_frame.train_num.get():
-        Constant.train_num = int(hyper_frame.train_num.get())
-    if hyper_frame.max_iters.get():
-        Constant.max_iters = int(hyper_frame.max_iters.get())
-    if hyper_frame.lr.get():
-        Constant.lr = float(hyper_frame.lr.get())
+    if model_frame.train_num.get():
+        Constant.train_num = int(model_frame.train_num.get())
+    if model_frame.max_iters.get():
+        Constant.max_iters = int(model_frame.max_iters.get())
+    if model_frame.lr.get():
+        Constant.lr = float(model_frame.lr.get())
 
 
 def check_tif(entry):
@@ -64,7 +64,7 @@ def run():
     flag = False
     waiting_check = [basic_frame.imageB.entry, basic_frame.imageA.entry, basic_frame.splitB.entry,
                      basic_frame.splitA.entry, basic_frame.splitD.entry,
-                     basic_frame.merge.entry, basic_frame.entry, basic_frame.entry_1]
+                     basic_frame.merge.entry, basic_frame.entry, basic_frame.entry_1,model_frame.model]
     for i in waiting_check:
         check_blank(i)
         if flag:
@@ -74,7 +74,7 @@ def run():
         check_tif(i)
         if flag:
             return
-    waiting_check = [hyper_frame.train_num, hyper_frame.max_iters, hyper_frame.lr]
+    waiting_check = [model_frame.train_num, model_frame.max_iters, model_frame.lr]
     for i in waiting_check:
         check_number(i)
         if flag:
@@ -82,6 +82,7 @@ def run():
 
     renew_constant()
     train_num, max_iters, lr = Constant.train_num, Constant.max_iters, Constant.lr
+    model_path=model_frame.model.get()
     # split
     img_path_before = basic_frame.imageB.entry.get()
     img_path_after = basic_frame.imageA.entry.get()
@@ -124,11 +125,11 @@ def run():
             params['minX'], params['maxY'], params['resolution']
 
         if train_or_pre == '1':
-            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', train_num,
+            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', model_path,train_num,
                       max_iters, lr, diff=diff)
 
         elif train_or_pre == '2':
-            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', train_num,
+            core.main(X, Y, row, column, projection, minx, maxy, xres, str(counter), split_diff + '/', model_path,train_num,
                       max_iters, lr, flag='pre')
 
     del X, Y, diff
@@ -201,26 +202,26 @@ def load_parameters():
 def show_about():
     about_frame.about_frame.pack()
     run_frame.run_frame.pack_forget()
-    hyper_frame.hyper_frame.pack_forget()
+    model_frame.model_frame.pack_forget()
     basic_frame.basic_frame.pack_forget()
 
 
 def show_run():
     run_frame.run_frame.pack()
     about_frame.about_frame.pack_forget()
-    hyper_frame.hyper_frame.pack_forget()
+    model_frame.model_frame.pack_forget()
     basic_frame.basic_frame.pack_forget()
 
 
-def show_hyper():
-    hyper_frame.hyper_frame.pack()
+def show_model():
+    model_frame.model_frame.pack()
     about_frame.about_frame.pack_forget()
     run_frame.run_frame.pack_forget()
     basic_frame.basic_frame.pack_forget()
 
 
 def show_basic():
-    hyper_frame.hyper_frame.pack_forget()
+    model_frame.model_frame.pack_forget()
     about_frame.about_frame.pack_forget()
     run_frame.run_frame.pack_forget()
     basic_frame.basic_frame.pack()
@@ -232,7 +233,7 @@ window.geometry('500x500')
 basic_frame = CreaterBasic(window)
 about_frame = CreateAbout(window)
 run_frame = CreateRun(window, run)
-hyper_frame = CreateHyper(window)
+model_frame = CreateModel(window)
 
 menubar = tk.Menu(window)
 filemenu = tk.Menu(menubar, tearoff=0)
@@ -241,7 +242,7 @@ filemenu.add_command(label='Save parameters', command=save_parameters)
 filemenu.add_command(label='Load parameters', command=load_parameters)
 
 menubar.add_command(label='Basic', command=show_basic)
-menubar.add_command(label='Hyperparameters', command=show_hyper)
+menubar.add_command(label='Model', command=show_model)
 menubar.add_command(label='Run', command=show_run)
 menubar.add_command(label='About', command=show_about)
 

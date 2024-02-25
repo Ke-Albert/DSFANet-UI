@@ -51,11 +51,11 @@ class CreateRun:
         button.grid(row=5,column=2)
 
 
-class CreateHyper:
+class CreateModel:
     def __init__(self, root):
-        self.hyper_frame = tk.Frame(root)
-        # tk.Label(self.hyper_frame,text='hyper page').pack()
-        self.create_page(self.hyper_frame)
+        self.model_frame = tk.Frame(root)
+        # tk.Label(self.model_frame,text='model page').pack()
+        self.create_page(self.model_frame)
 
     def create_page(self,root):
         tk.Label(root,text='train numbers').grid(row=1,column=1)
@@ -67,7 +67,9 @@ class CreateHyper:
         tk.Label(root,text='lr').grid(row=3,column=1)
         self.lr=tk.Entry(root,width=5)
         self.lr.grid(row=3,column=2)
-
+        tk.Label(root,text='model').grid(row=4,column=1)
+        self.model=tk.Entry(root,width=5)
+        self.model.grid(row=4,column=2)
 
 class CreaterBasic:
     def __init__(self,root):
